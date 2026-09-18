@@ -1,57 +1,53 @@
 # Spec: Login and Logout
 
 ## Overview
-Implement session-based authentication so registered users can sign in and out of Spendly. This step upgrades the existing stub `GET /login` route into a fully functional form that accepts a POST, verifies credentials against the `users` table, and establishes a session. It also replaces the `/logout` placeholder with real session-clearing logic. `base.html` already branches its nav on `session.user_id` and links to `url_for('logout')`, `url_for('profile')`, and `url_for('analytics')` — this step makes `session.user_id` real and makes `/logout` work, unblocking those nav links (the `profile` and `analytics` routes themselves remain out of scope and are covered by later steps).
+This feature implements user authentication for Spendly. It converts the `/login` stub into a functional POST handler that verifies credentials against the database, stores the authenticated user's ID in the session, and redirects to the dashboard (or a suitable landing page). It also implements the `/logout` stub, which clears the session and redirects to the landing page. After this step, the app can distinguish logged-in users from guests, which is a prerequisite for all expense features.
 
 ## Depends on
-- Step 01 — Database setup (`users` table, `get_db()`, `get_user_by_email()`)
-- Step 02 — Registration (users must be able to register before they can log in)
+- Step 01 — Database Setup (`users` table must exist)
+- Step 02 — Registration (`create_user` and password hashing must be in place; a user must exist to log in against)
 
 ## Routes
-- `GET /login` — render login form — public (already exists as stub, upgrade it)
-- `POST /login` — verify credentials, establish session, redirect to `/profile` — public
-- `GET /logout` — clear session, redirect to `/login` — logged-in (currently a placeholder string, replace it)
+- `GET /login` — render login form — public
+- `POST /login` — validate credentials, set session, redirect — public
+- `GET /logout` — clear session, redirect to `/` — public (no login required to log out)
 
 ## Database changes
-No new tables or columns. The existing `users` table and `get_user_by_email()` helper in `database/db.py` cover all requirements. No new DB helpers needed.
+No database changes. The `users` table created in Step 01 already stores `email` and `password_hash`.
 
 ## Templates
-- **Modify:** `templates/login.html`
-  - Form already posts to `url_for('login')` with `method="POST"` and has `name` attributes on `email`/`password` — no structural changes needed
-  - Add a block to display a flashed error message (e.g. "Invalid email or password"), matching the flash pattern used in `register.html`
+- **Modify:** `templates/login.html` — add a POST form with `email` and `password` fields, flash message display, and a link to `/register`
 
 ## Files to change
-- `app.py`:
-  - Upgrade `login()` to accept `methods=["GET", "POST"]`
-  - On `POST`: look up the user via `get_user_by_email()`, verify the password with `werkzeug.security.check_password_hash`, and on success set `session["user_id"]` (and optionally `session["user_name"]`) then `redirect(url_for('profile'))`
-  - On failure (no such email, or wrong password): `flash` a generic "Invalid email or password" error and re-render `login.html` — do not reveal whether the email exists
-  - Replace the `logout()` placeholder: clear the session (`session.clear()` or `session.pop("user_id", None)`) and `redirect(url_for('login'))`
-  - Import `session` and `check_password_hash` where needed
-- `templates/login.html` — add flash message display block
+- `app.py` — implement `login()` as GET+POST handler and implement `logout()`
+- `database/db.py` — add `get_user_by_email(email)` helper that returns a user row or `None`
+- `templates/login.html` — add POST form and flash display
 
 ## Files to create
-None.
+No new files.
 
 ## New dependencies
-No new dependencies. Uses `werkzeug.security.check_password_hash` (already installed via `werkzeug`) and Flask's built-in `session` / `flash` / `redirect` / `url_for`.
+No new dependencies. `werkzeug.security.check_password_hash` is already available via the existing `werkzeug` install.
 
 ## Rules for implementation
-- No SQLAlchemy or ORMs
-- Parameterised queries only — never use f-strings in SQL (reuse `get_user_by_email()`, no new raw SQL needed)
-- Passwords hashed with werkzeug — verify with `check_password_hash`, never compare plaintext
+- No SQLAlchemy or ORMs — use raw `sqlite3` via `get_db()`
+- Parameterised queries only — never use f-strings in SQL
+- Passwords verified with `werkzeug.security.check_password_hash`
+- Session key for the logged-in user must be `session["user_id"]` (integer)
+- Use `flask.session` — do not roll a custom session mechanism
 - Use CSS variables — never hardcode hex values
 - All templates extend `base.html`
-- Use `url_for()` for every internal link — never hardcode URLs
-- On invalid login, show one generic error message — do not distinguish "email not found" from "wrong password"
-- `session.clear()` (or removing `user_id`) must fully log the user out — no residual session data
-- Use `abort(405)` if an unsupported HTTP method reaches `/login`
-- Do not implement `/profile` or `analytics` route logic in this step — only enough for `/login` to redirect somewhere reasonable and for `/logout` to be reachable from the nav once `session.user_id` is set
+- Use `url_for()` for every internal link — never hardcode paths
+- On failed login show a generic flash error ("Invalid email or password.") — do not reveal which field was wrong
+- After successful login redirect to `url_for("landing")` until a dashboard route exists
+- `logout()` must call `session.clear()` then redirect to `url_for("landing")`
+- `get_user_by_email` belongs in `database/db.py`, not inline in the route
 
 ## Definition of done
-- [ ] `GET /login` renders the login form without errors
-- [ ] Submitting valid demo credentials (`demo@spendly.com` / `demo123`) sets `session.user_id` and redirects toward `/profile`
-- [ ] Submitting an unknown email re-renders the form with a generic "Invalid email or password" error, no session set
-- [ ] Submitting a known email with the wrong password re-renders the form with the same generic error, no session set
-- [ ] After a successful login, `base.html`'s nav shows "Analytics" / "Dashboard" / "Sign out" instead of "Sign in" / "Get started"
-- [ ] Visiting `/logout` while logged in clears the session and redirects to `/login`, and the nav reverts to the logged-out state
-- [ ] No plaintext password comparison anywhere in the code
+- [ ] Visiting `GET /login` renders the login form with email and password fields
+- [ ] Submitting the form with valid credentials (e.g. demo@spendly.com / demo123) sets `session["user_id"]` and redirects to `/`
+- [ ] Submitting with a wrong password shows "Invalid email or password." flash and stays on the login page
+- [ ] Submitting with an unregistered email shows the same generic error flash
+- [ ] Visiting `GET /logout` clears the session and redirects to `/`
+- [ ] After logout, `session["user_id"]` is no longer present
+- [ ] The `/logout` route no longer returns the raw stub string
