@@ -4,11 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Spendly is a Flask expense-tracker web app, built as a guided, step-by-step learning exercise. Most of the codebase is a scaffold: some routes and templates are complete, but the database layer and expense CRUD routes are intentionally left as stubs for the "student" to implement, following a numbered step plan (Step 1, Step 3, Step 4, Step 7-9, etc. — see comments in `app.py` and `database/db.py`). When asked to "implement the next step," check these comments to find the current step and its expected scope rather than jumping ahead.
+Spendly is a Flask expense-tracker web app, built as a guided, step-by-step learning exercise. Templates, static assets, and most of the database layer already exist, but `app.py` hasn't been wired up to use them yet: it still returns plain placeholder strings for `/logout`, `/profile`, and the expense CRUD routes, and has no session/auth logic, following a numbered step plan referenced in code comments (Step 1, Step 3, Step 4, Step 7-9, etc.). When asked to "implement the next step," check these comments in `app.py` to find the current step and its expected scope rather than jumping ahead.
+
+**Known gaps** (don't assume these are wired up — verify before relying on them):
+- `templates/base.html` links to `url_for('analytics')` and checks `session.user_id`, but `app.py` has no `analytics` route, no session/auth logic, and no `secret_key` configured.
+- `templates/register.html` and `templates/login.html` already POST to `url_for('register')` / `url_for('login')`, but those routes in `app.py` only accept GET — submitting either form will 405 until POST handling is added.
+- `database/db.py` and `database/queries.py` contain working functions, but nothing in `app.py` imports or calls them yet.
 
 ## Commands
 
-Run all commands from this directory (`expense-tracker/expense-tracker`).
+Run all commands from the repository root.
 
 ```
 pip install -r requirements.txt   # install dependencies
@@ -17,14 +22,15 @@ pytest                            # run tests
 pytest path/to/test_file.py::test_name   # run a single test
 ```
 
-There is no lint/format tooling configured in this repo.
+There is no lint/format tooling configured in this repo. There are no tests in the repo yet, despite `pytest` and `pytest-flask` being listed in `requirements.txt` — they're presumably for a later step.
 
 ## Architecture
 
 - **`app.py`** — single-file Flask app; all routes are defined directly on the module-level `app` object (no blueprints). Templated routes (`/`, `/register`, `/login`, `/terms`, `/privacy`) call `render_template`. Placeholder routes (`/logout`, `/profile`, `/expenses/add`, `/expenses/<id>/edit`, `/expenses/<id>/delete`) currently return plain "coming in Step N" strings and have no real logic yet.
-- **`database/db.py`** — intended to hold `get_db()` (SQLite connection with `row_factory` and foreign keys enabled), `init_db()` (creates tables with `CREATE TABLE IF NOT EXISTS`), and `seed_db()` (sample dev data). Currently empty; the SQLite file is `expense_tracker.db` (gitignored, created at runtime).
-- **`templates/`** — Jinja2 templates. `base.html` defines the shared layout (nav, footer, font/CSS links) with `title`/`head`/`content`/`scripts` blocks; page templates extend it. The brand name "Spendly" and footer tagline live in `base.html`.
-- **`static/css/style.css`** — all styling in one stylesheet (no CSS framework).
+- **`database/db.py`** — `get_db()` opens a `sqlite3` connection to `database/spendly.db` with `row_factory = sqlite3.Row` and foreign keys enabled; `init_db()` creates the `users` and `expenses` tables (`CREATE TABLE IF NOT EXISTS`); `seed_db()` inserts one demo user (`demo@spendly.com`) and sample expenses if the `users` table is empty; `create_user()` / `get_user_by_email()` handle auth lookups with `werkzeug.security` password hashing.
+- **`database/queries.py`** — expense CRUD (`insert_expense`, `get_expense_by_id`, `update_expense`, `delete_expense_by_id`) and read-side helpers for the profile/analytics views (`get_user_by_id`, `get_recent_transactions`, `get_summary_stats`, `get_category_breakdown`), all scoped by `user_id` and each opening/closing its own connection via `get_db()`. Note `database/spendly.db` is *not* covered by `.gitignore` (which only ignores `expense_tracker.db` at the repo root) — be careful not to `git add` it once it's been seeded/used, since it'll contain a password hash.
+- **`templates/`** — Jinja2 templates, all extending `base.html`'s `title`/`head`/`content`/`scripts` (and sometimes `flash`) blocks: `landing.html`, `register.html`, `login.html`, `terms.html`, `privacy.html`, `profile.html`, `analytics.html`, `add_expense.html`, `edit_expense.html`. `base.html` defines the shared nav/footer, pulls in the Google Fonts + `static/css/style.css`, and renders flash messages via `get_flashed_messages`.
+- **`static/css/`** — `style.css` is the shared base stylesheet; `landing.css`, `profile.css`, `analytics.css`, `add_expense.css` are page-specific overrides loaded from each template's `{% block head %}`.
 - **`static/js/main.js`** — minimal, currently near-empty.
 
-When adding a new page, follow the existing pattern: add a route in `app.py` returning `render_template(...)`, create a template under `templates/` extending `base.html`, and link it via `url_for('<endpoint>')` rather than hardcoded paths.
+When adding a new page, follow the existing pattern: add a route in `app.py` returning `render_template(...)`, create a template under `templates/` extending `base.html`, and link it via `url_for('<endpoint>')` rather than hardcoded paths. When wiring up a route to real data, use `database/db.py` for connections/auth and `database/queries.py` for expense/analytics reads and writes rather than writing raw SQL in `app.py`.
