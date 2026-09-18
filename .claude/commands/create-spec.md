@@ -1,5 +1,5 @@
 ---
-description: Create a spec file and feature branch for the next Spendly step
+description: Create a spec file and feature branch for the next Spendly feature 
 argument-hint: "Step number and feature name e.g. 2 registration"
 allowed-tools: Read, Write, Glob, Bash(git:*)
 ---
