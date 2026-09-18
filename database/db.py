@@ -74,14 +74,14 @@ def seed_db():
     user_id = cursor.lastrowid
 
     expenses = [
-        (user_id, 450.00,  "Food",          "2026-04-01", "Groceries from D-Mart"),
-        (user_id, 120.00,  "Transport",     "2026-04-02", "Metro card recharge"),
-        (user_id, 1200.00, "Bills",         "2026-04-03", "Electricity bill"),
-        (user_id, 350.00,  "Health",        "2026-04-05", "Pharmacy — vitamins"),
-        (user_id, 500.00,  "Entertainment", "2026-04-06", "Movie tickets"),
-        (user_id, 800.00,  "Shopping",      "2026-04-07", "New earphones"),
-        (user_id, 200.00,  "Other",         "2026-04-08", "Miscellaneous"),
-        (user_id, 180.00,  "Food",          "2026-04-08", "Lunch with colleagues"),
+        (user_id, 42.50, "Food",          "2026-04-01", "Groceries from REWE"),
+        (user_id, 38.00, "Transport",     "2026-04-02", "Deutschlandticket (Student)"),
+        (user_id, 24.80, "Food",          "2026-04-03", "Weekly haul from Lidl"),
+        (user_id, 15.60, "Food",          "2026-04-04", "Organic produce from Edeka"),
+        (user_id, 19.99, "Shopping",      "2026-04-05", "Cosmetics and household items from dm"),
+        (user_id, 12.45, "Health",        "2026-04-06", "Supplements and pharmacy items from Rossmann"),
+        (user_id, 39.99, "Bills",         "2026-04-07", "Wi-Fi / Internet bill"),
+        (user_id, 14.00, "Entertainment", "2026-04-08", "Cinema night with friends"),
     ]
 
     conn.executemany(
