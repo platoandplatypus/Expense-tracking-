@@ -94,7 +94,56 @@ def logout():
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user = {
+        "name": session.get("user_name", "Demo User"),
+        "email": "demo@spendly.com",
+        "initials": "".join(w[0].upper() for w in session.get("user_name", "Demo User").split() if w),
+        "member_since": "April 2026",
+    }
+
+    stats = {
+        "total": "142.83",
+        "count": 6,
+        "top_category": "Food",
+    }
+
+    expenses = [
+        {"id": 1, "date": "05 Apr 2026", "description": "Groceries from REWE", "category": "Food", "amount": "42.50"},
+        {"id": 2, "date": "04 Apr 2026", "description": "Deutschlandticket (Student)", "category": "Transport", "amount": "38.00"},
+        {"id": 3, "date": "03 Apr 2026", "description": "Weekly haul from Lidl", "category": "Food", "amount": "24.80"},
+        {"id": 4, "date": "02 Apr 2026", "description": "Wi-Fi / Internet bill", "category": "Bills", "amount": "39.99"},
+        {"id": 5, "date": "01 Apr 2026", "description": "Cinema night with friends", "category": "Entertainment", "amount": "14.00"},
+    ]
+
+    categories = [
+        {"name": "Food", "amount": "67.30", "percent": 47},
+        {"name": "Transport", "amount": "38.00", "percent": 27},
+        {"name": "Bills", "amount": "39.99", "percent": 15},
+        {"name": "Entertainment", "amount": "14.00", "percent": 11},
+    ]
+
+    presets = {
+        "this_month": {"date_from": "2026-04-01", "date_to": "2026-04-30"},
+        "last_3": {"date_from": "2026-02-01", "date_to": "2026-04-30"},
+        "last_6": {"date_from": "2025-11-01", "date_to": "2026-04-30"},
+    }
+
+    date_from = request.args.get("date_from")
+    date_to = request.args.get("date_to")
+
+    return render_template(
+        "profile.html",
+        user=user,
+        stats=stats,
+        expenses=expenses,
+        categories=categories,
+        date_from=date_from,
+        date_to=date_to,
+        presets=presets,
+    )
 
 
 @app.route("/analytics")
